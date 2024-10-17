@@ -75,37 +75,60 @@ class ApiProvider {
 
 
 
-  // Common error handler
-  dynamic handleError(DioException error) {
-    String errorDescription = "";
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout) {
-      errorDescription = "Connection timeout. Please try again later.";
-    } else if (error.type == DioExceptionType.badResponse) {
-      // Handle specific status codes
-      if (error.response != null) {
-        switch (error.response!.statusCode) {
-          case 400:
-            errorDescription = "Bad request. Please check your input.";
-            break;
-          case 404:
-            errorDescription = "Resource not found.";
-            break;
-          case 500:
-            errorDescription = "Internal server error. Please try again later.";
-            break;
-          default:
-            errorDescription = "Something went wrong. Please try again.";
-        }
+// Common error handler
+dynamic handleError(DioException error) {
+  String errorDescription = "";
+  
+  if (error.type == DioExceptionType.connectionTimeout ||
+      error.type == DioExceptionType.receiveTimeout) {
+    errorDescription = "Connection timeout. Please try again later.";
+  } else if (error.type == DioExceptionType.badResponse) {
+    // Handle specific status codes
+    if (error.response != null) {
+      switch (error.response!.statusCode) {
+        case 400:
+          errorDescription = "Bad request. Please check your input.";
+          break;
+        case 401:
+          errorDescription = "Unauthorized. Please check your credentials.";
+          break;
+        case 403:
+          errorDescription = "Forbidden. You do not have permission to access this resource.";
+          break;
+        case 404:
+          errorDescription = "Resource not found.";
+          break;
+        case 408:
+          errorDescription = "Request timeout. Please try again.";
+          break;
+        case 429:
+          errorDescription = "Too many requests. Please slow down and try again later.";
+          break;
+        case 500:
+          errorDescription = "Internal server error. Please try again later.";
+          break;
+        case 502:
+          errorDescription = "Bad gateway. There is an issue with the server.";
+          break;
+        case 503:
+          errorDescription = "Service unavailable. The server is temporarily down.";
+          break;
+        case 504:
+          errorDescription = "Gateway timeout. Please try again later.";
+          break;
+        default:
+          errorDescription = "Something went wrong. Please try again.";
       }
-    } else if (error.type == DioExceptionType.cancel) {
-      errorDescription = "Request to the server was cancelled.";
-    } else {
-      errorDescription = "Unexpected error occurred.";
     }
-
-    // Log error for debugging
-    print("Dio error: $errorDescription");
-    return errorDescription;
+  } else if (error.type == DioExceptionType.cancel) {
+    errorDescription = "Request to the server was cancelled.";
+  } else {
+    errorDescription = "Unexpected error occurred.";
   }
+
+  // Log error for debugging
+  print("Dio error: $errorDescription");
+  return errorDescription;
+}
+
 }
