@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  sharedPreferences = await SharedPreferences.getInstance();
+  await Firebase.initializeApp(
+     options: DefaultFirebaseOptions.currentPlatform
+  );
   runApp(const MyApp());
 }
 
