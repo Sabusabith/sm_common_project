@@ -1,37 +1,105 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // Register user
-  Future<User?> register(String email, String password) async {
-    try {
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(email: email, password: password);
-      return userCredential.user;
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }
-
-  // Login user
-  Future<User?> login(String email, String password) async {
-    try {
-      UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(email: email, password: password);
-      return userCredential.user;
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }
-
-  // Logout user
-  Future<void> logout() async {
-    await _auth.signOut();
-  }
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Get current user
-  User? getCurrentUser() {
-    return _auth.currentUser;
+  User? get currentUser => _auth.currentUser;
+
+  // Google Sign-In
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      throw Exception("Google Sign-In failed: $e");
+    }
+  }
+
+  // Apple Sign-In
+  Future<UserCredential?> signInWithApple() async {
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      );
+
+      final credential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      throw Exception("Apple Sign-In failed: $e");
+    }
+  }
+
+  // Sign in with Email & Password
+  Future<UserCredential?> signInWithEmail(String email, String password) async {
+    try {
+      return await _auth.signInWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      throw Exception("Email Sign-In failed: $e");
+    }
+  }
+
+  // Register with Email & Password
+  Future<UserCredential?> registerWithEmail(String email, String password) async {
+    try {
+      return await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      throw Exception("Email Registration failed: $e");
+    }
+  }
+
+  // Sign in with Phone Number
+  Future<void> signInWithPhone(String phoneNumber, Function(String) codeSent) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await _auth.signInWithCredential(credential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          throw Exception("Phone Sign-In failed: $e");
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          codeSent(verificationId);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    } catch (e) {
+      throw Exception("Phone Sign-In failed: $e");
+    }
+  }
+
+  // Verify OTP
+  Future<UserCredential?> verifyOTP(String verificationId, String smsCode) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      throw Exception("OTP verification failed: $e");
+    }
+  }
+
+  // Sign out
+  Future<void> signOut() async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
   }
 }
